@@ -25,6 +25,7 @@ player_height = 32
 player_viewing_angle = 198
 
 brick_texture = nil
+floor_texture = nil
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest', 1)
@@ -33,10 +34,11 @@ function love.load()
     minimap = love.graphics.newCanvas(1280, 800)
     minimap:setFilter("nearest", "nearest")
 
-    world = love.graphics.newCanvas(320, 200)
+    world = love.graphics.newCanvas(proj_width, proj_height)
     world:setFilter("nearest", "nearest")
 
     brick_texture = love.graphics.newImage('bricksx64.png')
+    floor_texture = love.image.newImageData('walkstone.png')
 end
 
 function draw_minimap()
@@ -77,7 +79,6 @@ function draw_minimap()
 end
 
 function love.update(dt)
-    -- player_viewing_angle = player_viewing_angle + 90 * dt
     if love.keyboard.isDown("a") then
         player_viewing_angle = player_viewing_angle + 60 * dt
     elseif love.keyboard.isDown("d") then
@@ -97,19 +98,20 @@ function draw_world()
     love.graphics.setCanvas(world)
     love.graphics.clear()
 
-    for i = 0, 100 do
+    for i = 0, proj_height / 2 do
         love.graphics.setColor(0.01 * i / 2, 0.005 * i / 2, 0.005 * i / 2);
-        love.graphics.line(0, 100 - i, 320, 100 - i)
-        love.graphics.line(0, 100 + i, 320, 100 + i)
+        love.graphics.line(0, proj_height / 2 - i, proj_width, proj_height / 2 - i)
+        love.graphics.line(0, proj_height / 2 + i, proj_width, proj_height / 2 + i)
     end
 
-    for i = 0, 320 do
-        local angle = fov / 2 - i * fov / 320
+    for i = 0, proj_width do
+        local angle = fov / 2 - i * fov / proj_width
 
         local x, y, dist, horizontal_boundary = raycast(angle)
 
+        local projected_wall_height = 0
         if dist < math.huge then
-            correct_dist = dist * math.cos(math.rad(angle))
+            local correct_dist = dist * math.cos(math.rad(angle))
             projected_wall_height = math.floor(64 / correct_dist * dist_to_proj + 0.5)
 
             local texture_offset = math.fmod(y, 64)
@@ -126,12 +128,36 @@ function draw_world()
                 color = 1
             end
             love.graphics.setColor(color, color, color, 1)
-            -- love.graphics.setColor(0, 1, 1, 1)
-            -- love.graphics.line(i, 100 - projected_wall_height * 0.5, i, 100 + projected_wall_height * 0.5)
+            -- love.graphics.line(i, proj_height / 2 - projected_wall_height * 0.5, i, proj_height / 2 + projected_wall_height * 0.5)
             local quad = love.graphics.newQuad(texture_offset, 0, 1, 64, brick_texture)
-            local transfrom = love.math.newTransform(i, 100 - projected_wall_height / 2, 0,
-                                                     1, projected_wall_height / 64)
+            local transfrom = love.math.newTransform(i, proj_height / 2 - projected_wall_height / 2, 0,
+                                                     1, projected_wall_height / tile_size)
             love.graphics.draw(brick_texture, quad, transfrom)
+        end
+
+        -- Floor casting
+        for j = proj_height / 2 + projected_wall_height / 2,  proj_height do
+            local flat_distance = player_height / (j - proj_height / 2) * dist_to_proj
+            local diag_distance = math.floor(flat_distance / math.cos(math.rad(angle)))
+
+            local alpha = wrap_angle(player_viewing_angle + angle)
+            local floor_x = player_x + math.floor(diag_distance * math.cos(math.rad(alpha)))
+            local floor_y = player_y - math.floor(diag_distance * math.sin(math.rad(alpha)))
+
+            local floor_tile_x = math.floor(floor_x / tile_size) + 1
+            local floor_tile_y = math.floor(floor_y / tile_size) + 1
+
+            -- print(j, alpha, math.floor(diag_distance), floor_x, floor_y, floor_tile_x, floor_tile_y)
+
+            if floor_tile_x >= 1 and floor_tile_y >= 1 and floor_tile_x <= map_width and floor_tile_y <= map_height then
+                local texture_x = math.floor(math.fmod(floor_x, tile_size))
+                local texture_y = math.floor(math.fmod(floor_y, tile_size))
+                local r,g,b = floor_texture:getPixel(texture_x, texture_y)
+
+                local brightness = 1 / (0.02 * diag_distance)
+                love.graphics.setColor(r * brightness, g * brightness, b * brightness)
+                love.graphics.rectangle('fill', i, j, 1, 1)
+            end
         end
     end
     love.graphics.setCanvas()
@@ -258,8 +284,8 @@ function love.draw()
     draw_minimap()
     draw_world()
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setBlendMode("alpha", "premultiplied")
+    -- love.graphics.setBlendMode("alpha", "premultiplied")
     love.graphics.draw(world, 0, 0, 0, 4, 4)
     -- love.graphics.setBlendMode("alpha", "premultiplied")
-    -- love.graphics.draw(minimap, 0, 0, 0, 0.25, 0.25)
+    -- love.graphics.draw(minimap, 0, 0, 0, 1, 1)
 end
