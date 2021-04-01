@@ -1,13 +1,13 @@
 map = {
-    { 1, 1, 1, 1, 1, 1, 1, 1},
-    { 1, 0, 1, 1, 1, 0, 0, 1},
-    { 1, 0, 1, 1, 1, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 1, 1, 1, 1, 1, 1, 1},
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 }
 
 map_width = #map
@@ -73,10 +73,6 @@ function draw_minimap()
                        player_x + fov_side_length * math.cos(math.rad(player_viewing_angle - fov / 2)),
                        player_y - fov_side_length * math.sin(math.rad(player_viewing_angle - fov / 2)))
 
-    -- raycast(-30)
-    raycast(0)
-    -- raycast(30)
-
     love.graphics.setCanvas()
 end
 
@@ -89,11 +85,11 @@ function love.update(dt)
     end
 
     if love.keyboard.isDown("w") then
-        player_x = player_x + 64 * math.cos(math.rad(player_viewing_angle)) * dt
-        player_y = player_y - 64 * math.sin(math.rad(player_viewing_angle)) * dt
+        player_x = player_x + 128 * math.cos(math.rad(player_viewing_angle)) * dt
+        player_y = player_y - 128 * math.sin(math.rad(player_viewing_angle)) * dt
     elseif love.keyboard.isDown("s") then
-        player_x = player_x - 64 * math.cos(math.rad(player_viewing_angle)) * dt
-        player_y = player_y + 64 * math.sin(math.rad(player_viewing_angle)) * dt
+        player_x = player_x - 128 * math.cos(math.rad(player_viewing_angle)) * dt
+        player_y = player_y + 128 * math.sin(math.rad(player_viewing_angle)) * dt
     end
 end
 
@@ -120,6 +116,16 @@ function draw_world()
             if horizontal_boundary then
                 texture_offset = math.fmod(x, 64)
             end
+
+            -- Add very basic shading
+            local color = 1 - dist / 400
+            if color < 0.1 then
+                color = 0.1
+            end
+            if color > 1 then
+                color = 1
+            end
+            love.graphics.setColor(color, color, color, 1)
             -- love.graphics.setColor(0, 1, 1, 1)
             -- love.graphics.line(i, 100 - projected_wall_height * 0.5, i, 100 + projected_wall_height * 0.5)
             local quad = love.graphics.newQuad(texture_offset, 0, 1, 64, brick_texture)
@@ -254,6 +260,6 @@ function love.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.setBlendMode("alpha", "premultiplied")
     love.graphics.draw(world, 0, 0, 0, 4, 4)
-    love.graphics.setBlendMode("alpha", "premultiplied")
-    love.graphics.draw(minimap, 0, 0, 0, 0.25, 0.25)
+    -- love.graphics.setBlendMode("alpha", "premultiplied")
+    -- love.graphics.draw(minimap, 0, 0, 0, 0.25, 0.25)
 end
