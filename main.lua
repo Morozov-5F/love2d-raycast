@@ -19,10 +19,14 @@ proj_height = 200
 dist_to_proj = 277 -- proj_width / 2 / math.tan(math.rad(fov / 2))
 fov_side_length = 320  -- dist_to_proj / math.cos(math.rad(fov / 2))
 
-player_x = 4 * 64 + 30
-player_y = 1 * 64 + 32
-player_height = 32
-player_viewing_angle = 198
+player_tile_x = 4
+player_tile_y = 1
+
+player_x = player_tile_x * tile_size + tile_size / 2
+player_y = player_tile_y * tile_size + tile_size / 2
+
+player_height = tile_size / 2
+player_viewing_angle = 0
 
 brick_texture = nil
 floor_texture = nil
@@ -79,19 +83,23 @@ function draw_minimap()
 end
 
 function love.update(dt)
-    if love.keyboard.isDown("a") then
-        player_viewing_angle = player_viewing_angle + 60 * dt
-    elseif love.keyboard.isDown("d") then
-        player_viewing_angle = player_viewing_angle - 60 * dt
+end
+
+function love.keypressed(key, scancode, isrepeat)
+    if key == "a" then
+        player_viewing_angle = wrap_angle(player_viewing_angle + 90)
+    elseif key == "d" then
+        player_viewing_angle = wrap_angle(player_viewing_angle - 90)
+    elseif key == "w" then
+        player_tile_x = player_tile_x + math.cos(math.rad(player_viewing_angle))
+        player_tile_y = player_tile_y - math.sin(math.rad(player_viewing_angle))
+    elseif key == "s" then
+        player_tile_x = player_tile_x - math.cos(math.rad(player_viewing_angle))
+        player_tile_y = player_tile_y + math.sin(math.rad(player_viewing_angle))
     end
 
-    if love.keyboard.isDown("w") then
-        player_x = player_x + 128 * math.cos(math.rad(player_viewing_angle)) * dt
-        player_y = player_y - 128 * math.sin(math.rad(player_viewing_angle)) * dt
-    elseif love.keyboard.isDown("s") then
-        player_x = player_x - 128 * math.cos(math.rad(player_viewing_angle)) * dt
-        player_y = player_y + 128 * math.sin(math.rad(player_viewing_angle)) * dt
-    end
+    player_x = player_tile_x * tile_size + tile_size / 2
+    player_y = player_tile_y * tile_size + tile_size / 2
 end
 
 function draw_world()
@@ -106,11 +114,11 @@ function draw_world()
 
     for i = 0, proj_width do
         local angle = fov / 2 - i * fov / proj_width
-
         local x, y, dist, horizontal_boundary = raycast(angle)
 
         local projected_wall_height = 0
         if dist < math.huge then
+
             local correct_dist = dist * math.cos(math.rad(angle))
             projected_wall_height = math.floor(64 / correct_dist * dist_to_proj + 0.5)
 
@@ -191,12 +199,12 @@ function raycast(angle)
     end
     vertical_offset_y = -vertical_offset_x * math.tan(math.rad(alpha))
     vertical_y = player_y - (vertical_x - player_x) * math.tan(math.rad(alpha))
-    vertical_dist = math.abs((vertical_y - player_y) / math.sin(math.rad(alpha)))
+    vertical_dist = math.sqrt((vertical_x - player_x) * (vertical_x - player_x) + (vertical_y - player_y) * (vertical_y - player_y))
     if not ray_going_right then
         vertical_x = vertical_x - 1
     end
 
-    for i = 1, 10 do
+    for i = 1, 30 do
         local tile_x_vert = math.floor(vertical_x / tile_size) + 1
         local tile_y_vert = math.floor(vertical_y / tile_size) + 1
 
@@ -216,7 +224,7 @@ function raycast(angle)
 
         vertical_x = vertical_x + vertical_offset_x
         vertical_y = vertical_y + vertical_offset_y
-        vertical_dist = math.abs((vertical_y - player_y) / math.sin(math.rad(alpha)))
+        vertical_dist = math.sqrt((vertical_x - player_x) * (vertical_x - player_x) + (vertical_y - player_y) * (vertical_y - player_y))
     end
 
     -- Detect intersection with horizontal grid lines
@@ -231,12 +239,12 @@ function raycast(angle)
     end
     horizontal_offset_x = -horizontal_offset_y / math.tan(math.rad(alpha))
     horizontal_x = player_x - (horizontal_y - player_y) / math.tan(math.rad(alpha))
-    horizontal_dist = math.abs((horizontal_x - player_x) / math.cos(math.rad(alpha)))
+    horizontal_dist = math.sqrt((horizontal_x - player_x) * (horizontal_x - player_x) + (horizontal_y - player_y) * (horizontal_y - player_y))
     if ray_going_up then
         horizontal_y = horizontal_y - 1
     end
 
-    for i = 1, 10 do
+    for i = 1, 30 do
         local tile_x_horiz = math.floor(horizontal_x / tile_size) + 1
         local tile_y_horiz = math.floor(horizontal_y / tile_size) + 1
 
@@ -256,7 +264,7 @@ function raycast(angle)
 
         horizontal_x = horizontal_x + horizontal_offset_x
         horizontal_y = horizontal_y + horizontal_offset_y
-        horizontal_dist = math.abs((horizontal_x - player_x) / math.cos(math.rad(alpha)))
+        horizontal_dist = math.sqrt((horizontal_x - player_x) * (horizontal_x - player_x) + (horizontal_y - player_y) * (horizontal_y - player_y))
     end
 
     local horizontal_boundary = true
