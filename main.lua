@@ -1,18 +1,18 @@
 map = {
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
     { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     { 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 }
 
 map_width = #map
 map_height = #map[1]
-fov = 60
+fov = 70
 tile_size = 64
 proj_width = 320
 proj_height = 200
@@ -22,8 +22,11 @@ fov_side_length = 320  -- dist_to_proj / math.cos(math.rad(fov / 2))
 player_tile_x = 4
 player_tile_y = 1
 
+player_speed = 2 * tile_size
 player_x = player_tile_x * tile_size + tile_size / 2
 player_y = player_tile_y * tile_size + tile_size / 2
+
+mouse_look_sensitivity = 0.25
 
 player_height = tile_size / 2
 player_viewing_angle = 0
@@ -32,6 +35,7 @@ brick_texture = nil
 floor_texture = nil
 
 function love.load()
+    love.mouse.setRelativeMode(true)
     love.graphics.setDefaultFilter('nearest', 'nearest', 1)
     love.window.setMode(1280, 800, {resizable = false, vsync = true, highdpi = true})
 
@@ -83,23 +87,23 @@ function draw_minimap()
 end
 
 function love.update(dt)
+    local vx = 0;
+    local vy = 0;
+
+    if love.keyboard.isDown("w") then
+        vx = player_speed * dt * math.cos(math.rad(player_viewing_angle));
+        vy = -player_speed * dt * math.sin(math.rad(player_viewing_angle));
+    elseif love.keyboard.isDown("s") then
+        vx = -player_speed * dt * math.cos(math.rad(player_viewing_angle));
+        vy = player_speed * dt * math.sin(math.rad(player_viewing_angle));
+    end
+    
+    player_x = player_x + vx;
+    player_y = player_y + vy;
 end
 
-function love.keypressed(key, scancode, isrepeat)
-    if key == "a" then
-        player_viewing_angle = wrap_angle(player_viewing_angle + 90)
-    elseif key == "d" then
-        player_viewing_angle = wrap_angle(player_viewing_angle - 90)
-    elseif key == "w" then
-        player_tile_x = player_tile_x + math.cos(math.rad(player_viewing_angle))
-        player_tile_y = player_tile_y - math.sin(math.rad(player_viewing_angle))
-    elseif key == "s" then
-        player_tile_x = player_tile_x - math.cos(math.rad(player_viewing_angle))
-        player_tile_y = player_tile_y + math.sin(math.rad(player_viewing_angle))
-    end
-
-    player_x = player_tile_x * tile_size + tile_size / 2
-    player_y = player_tile_y * tile_size + tile_size / 2
+function love.mousemoved(x, y, dx, dy, isTouch)
+    player_viewing_angle = player_viewing_angle - mouse_look_sensitivity * dx
 end
 
 function draw_world()
