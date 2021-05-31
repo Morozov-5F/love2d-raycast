@@ -22,7 +22,11 @@ fov_side_length = 320  -- dist_to_proj / math.cos(math.rad(fov / 2))
 player_tile_x = 4
 player_tile_y = 1
 
-player_speed = 2 * tile_size
+max_player_speed = 20 * tile_size
+
+player_vx = 0
+player_vy = 0
+
 player_x = player_tile_x * tile_size + tile_size / 2
 player_y = player_tile_y * tile_size + tile_size / 2
 
@@ -87,19 +91,58 @@ function draw_minimap()
 end
 
 function love.update(dt)
-    local vx = 0;
-    local vy = 0;
+    local player_forward_x = math.cos(math.rad(player_viewing_angle))
+    local player_forward_y = -math.sin(math.rad(player_viewing_angle))
 
+    local player_strafe_x = math.cos(math.rad(player_viewing_angle + 90))
+    local player_strafe_y = -math.sin(math.rad(player_viewing_angle + 90))
+
+    local forward = 0
     if love.keyboard.isDown("w") then
-        vx = player_speed * dt * math.cos(math.rad(player_viewing_angle));
-        vy = -player_speed * dt * math.sin(math.rad(player_viewing_angle));
+        forward = 1
     elseif love.keyboard.isDown("s") then
-        vx = -player_speed * dt * math.cos(math.rad(player_viewing_angle));
-        vy = player_speed * dt * math.sin(math.rad(player_viewing_angle));
+        forward = -1
     end
-    
-    player_x = player_x + vx;
-    player_y = player_y + vy;
+
+    local strafe = 0
+    if love.keyboard.isDown("a") then
+        strafe = 1
+    elseif love.keyboard.isDown("d") then
+        strafe = -1
+    end
+
+    -- Add forward movement
+    player_vx = player_vx + player_forward_x * forward * max_player_speed * dt
+    player_vy = player_vy + player_forward_y * forward * max_player_speed * dt
+
+    -- Add strafe movement
+    player_vx = player_vx + player_strafe_x * strafe * max_player_speed * dt
+    player_vy = player_vy + player_strafe_y * strafe * max_player_speed * dt
+
+    -- Limit movement
+    if player_vx > max_player_speed then
+        player_vx = max_player_speed
+    elseif player_vx < -max_player_speed then
+        player_vx = -max_player_speed
+    end
+
+    if player_vy > max_player_speed then
+        player_vy = max_player_speed
+    elseif player_vy < -max_player_speed then
+        player_vy = -max_player_speed
+    end
+
+    -- Apply friction if necessary
+    if forward == 0 and strafe == 0 and (math.abs(player_vx) < 1 and math.abs(player_vy) < 1) then 
+        player_vx = 0
+        player_vy = 0
+    else
+        player_vx = 0.9 * player_vx
+        player_vy = 0.9 * player_vy
+    end
+
+    player_x = player_x + player_vx * dt
+    player_y = player_y + player_vy * dt
 end
 
 function love.mousemoved(x, y, dx, dy, isTouch)
@@ -148,29 +191,29 @@ function draw_world()
         end
 
         -- Floor casting
-        for j = proj_height / 2 + projected_wall_height / 2,  proj_height do
-            local flat_distance = player_height / (j - proj_height / 2) * dist_to_proj
-            local diag_distance = math.floor(flat_distance / math.cos(math.rad(angle)))
+        -- for j = proj_height / 2 + projected_wall_height / 2,  proj_height do
+        --     local flat_distance = player_height / (j - proj_height / 2) * dist_to_proj
+        --     local diag_distance = math.floor(flat_distance / math.cos(math.rad(angle)))
 
-            local alpha = wrap_angle(player_viewing_angle + angle)
-            local floor_x = player_x + math.floor(diag_distance * math.cos(math.rad(alpha)))
-            local floor_y = player_y - math.floor(diag_distance * math.sin(math.rad(alpha)))
+        --     local alpha = wrap_angle(player_viewing_angle + angle)
+        --     local floor_x = player_x + math.floor(diag_distance * math.cos(math.rad(alpha)))
+        --     local floor_y = player_y - math.floor(diag_distance * math.sin(math.rad(alpha)))
 
-            local floor_tile_x = math.floor(floor_x / tile_size) + 1
-            local floor_tile_y = math.floor(floor_y / tile_size) + 1
+        --     local floor_tile_x = math.floor(floor_x / tile_size) + 1
+        --     local floor_tile_y = math.floor(floor_y / tile_size) + 1
 
-            -- print(j, alpha, math.floor(diag_distance), floor_x, floor_y, floor_tile_x, floor_tile_y)
+        --     -- print(j, alpha, math.floor(diag_distance), floor_x, floor_y, floor_tile_x, floor_tile_y)
 
-            if floor_tile_x >= 1 and floor_tile_y >= 1 and floor_tile_x <= map_width and floor_tile_y <= map_height then
-                local texture_x = math.floor(math.fmod(floor_x, tile_size))
-                local texture_y = math.floor(math.fmod(floor_y, tile_size))
-                local r,g,b = floor_texture:getPixel(texture_x, texture_y)
+        --     if floor_tile_x >= 1 and floor_tile_y >= 1 and floor_tile_x <= map_width and floor_tile_y <= map_height then
+        --         local texture_x = math.floor(math.fmod(floor_x, tile_size))
+        --         local texture_y = math.floor(math.fmod(floor_y, tile_size))
+        --         local r,g,b = floor_texture:getPixel(texture_x, texture_y)
 
-                local brightness = 1 / (0.02 * diag_distance)
-                love.graphics.setColor(r * brightness, g * brightness, b * brightness)
-                love.graphics.rectangle('fill', i, j, 1, 1)
-            end
-        end
+        --         local brightness = 1 / (0.02 * diag_distance)
+        --         love.graphics.setColor(r * brightness, g * brightness, b * brightness)
+        --         love.graphics.rectangle('fill', i, j, 1, 1)
+        --     end
+        -- end
     end
     love.graphics.setCanvas()
 end
@@ -300,4 +343,5 @@ function love.draw()
     love.graphics.draw(world, 0, 0, 0, 4, 4)
     -- love.graphics.setBlendMode("alpha", "premultiplied")
     -- love.graphics.draw(minimap, 0, 0, 0, 1, 1)
+    love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 10, 10)
 end
