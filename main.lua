@@ -7,6 +7,13 @@ map = {
     { 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     { 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
     { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    { 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+    { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1},
+    { 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1},
+    { 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1},
+    { 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1},
+    { 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
+    { 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1},
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 }
 
@@ -37,6 +44,7 @@ player_viewing_angle = 0
 
 brick_texture = nil
 floor_texture = nil
+arm_texture = nil
 
 function love.load()
     love.mouse.setRelativeMode(true)
@@ -51,6 +59,7 @@ function love.load()
 
     brick_texture = love.graphics.newImage('bricksx64.png')
     floor_texture = love.image.newImageData('walkstone.png')
+    arm_texture = love.graphics.newImage('colt.png')
 end
 
 function draw_minimap()
@@ -141,6 +150,18 @@ function love.update(dt)
         player_vy = 0.9 * player_vy
     end
 
+    -- collision detection part
+    local try_x = player_x + player_vx * dt
+    local try_y = player_y + player_vy * dt
+
+    local try_player_tile_x = math.floor(try_x / tile_size) + 1
+    local try_player_tile_y = math.floor(try_y / tile_size) + 1
+
+    if try_player_tile_x < 1 or try_player_tile_x > map_width or try_player_tile_y < 1 or try_player_tile_y > map_height or map[try_player_tile_x][try_player_tile_y] ~= 0 then 
+        player_vx = 0 
+        player_vy = 0
+    end
+
     player_x = player_x + player_vx * dt
     player_y = player_y + player_vy * dt
 end
@@ -191,30 +212,33 @@ function draw_world()
         end
 
         -- Floor casting
-        -- for j = proj_height / 2 + projected_wall_height / 2,  proj_height do
-        --     local flat_distance = player_height / (j - proj_height / 2) * dist_to_proj
-        --     local diag_distance = math.floor(flat_distance / math.cos(math.rad(angle)))
+        for j = proj_height / 2 + projected_wall_height / 2,  proj_height do
+            local flat_distance = player_height / (j - proj_height / 2) * dist_to_proj
+            local diag_distance = math.floor(flat_distance / math.cos(math.rad(angle)))
 
-        --     local alpha = wrap_angle(player_viewing_angle + angle)
-        --     local floor_x = player_x + math.floor(diag_distance * math.cos(math.rad(alpha)))
-        --     local floor_y = player_y - math.floor(diag_distance * math.sin(math.rad(alpha)))
+            local alpha = wrap_angle(player_viewing_angle + angle)
+            local floor_x = player_x + math.floor(diag_distance * math.cos(math.rad(alpha)))
+            local floor_y = player_y - math.floor(diag_distance * math.sin(math.rad(alpha)))
 
-        --     local floor_tile_x = math.floor(floor_x / tile_size) + 1
-        --     local floor_tile_y = math.floor(floor_y / tile_size) + 1
+            local floor_tile_x = math.floor(floor_x / tile_size) + 1
+            local floor_tile_y = math.floor(floor_y / tile_size) + 1
 
-        --     -- print(j, alpha, math.floor(diag_distance), floor_x, floor_y, floor_tile_x, floor_tile_y)
+            -- print(j, alpha, math.floor(diag_distance), floor_x, floor_y, floor_tile_x, floor_tile_y)
 
-        --     if floor_tile_x >= 1 and floor_tile_y >= 1 and floor_tile_x <= map_width and floor_tile_y <= map_height then
-        --         local texture_x = math.floor(math.fmod(floor_x, tile_size))
-        --         local texture_y = math.floor(math.fmod(floor_y, tile_size))
-        --         local r,g,b = floor_texture:getPixel(texture_x, texture_y)
+            if floor_tile_x >= 1 and floor_tile_y >= 1 and floor_tile_x <= map_width and floor_tile_y <= map_height then
+                local texture_x = math.floor(math.fmod(floor_x, tile_size))
+                local texture_y = math.floor(math.fmod(floor_y, tile_size))
+                local r,g,b = floor_texture:getPixel(texture_x, texture_y)
 
-        --         local brightness = 1 / (0.02 * diag_distance)
-        --         love.graphics.setColor(r * brightness, g * brightness, b * brightness)
-        --         love.graphics.rectangle('fill', i, j, 1, 1)
-        --     end
-        -- end
+                local brightness = 1 / (0.02 * diag_distance)
+                love.graphics.setColor(r * brightness, g * brightness, b * brightness)
+                love.graphics.rectangle('fill', i, j, 1, 1)
+            end
+        end
     end
+
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(arm_texture, proj_width / 2 - arm_texture:getWidth() / 2, proj_height - 64)
     love.graphics.setCanvas()
 end
 
